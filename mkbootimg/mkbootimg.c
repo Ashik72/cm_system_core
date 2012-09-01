@@ -22,7 +22,7 @@
 #include <fcntl.h>
 #include <errno.h>
 
-#include "mincrypt/sha.h"
+#include <openssl/sha.h>
 #include "bootimg.h"
 
 static void *load_file(const char *fn, unsigned *_sz)
@@ -109,7 +109,7 @@ int main(int argc, char **argv)
     unsigned pagesize = 2048;
     int fd;
     SHA_CTX ctx;
-    uint8_t* sha;
+    unsigned char sha[SHA_DIGEST_LENGTH];
 
     argc--;
     argv++;
@@ -221,16 +221,16 @@ int main(int argc, char **argv)
     /* put a hash of the contents in the header so boot images can be
      * differentiated based on their first 2k.
      */
-    SHA_init(&ctx);
-    SHA_update(&ctx, kernel_data, hdr.kernel_size);
-    SHA_update(&ctx, &hdr.kernel_size, sizeof(hdr.kernel_size));
-    SHA_update(&ctx, ramdisk_data, hdr.ramdisk_size);
-    SHA_update(&ctx, &hdr.ramdisk_size, sizeof(hdr.ramdisk_size));
-    SHA_update(&ctx, second_data, hdr.second_size);
-    SHA_update(&ctx, &hdr.second_size, sizeof(hdr.second_size));
-    sha = SHA_final(&ctx);
+    SHA1_Init(&ctx);
+    SHA1_Update(&ctx, kernel_data, hdr.kernel_size);
+    SHA1_Update(&ctx, &hdr.kernel_size, sizeof(hdr.kernel_size));
+    SHA1_Update(&ctx, ramdisk_data, hdr.ramdisk_size);
+    SHA1_Update(&ctx, &hdr.ramdisk_size, sizeof(hdr.ramdisk_size));
+    SHA1_Update(&ctx, second_data, hdr.second_size);
+    SHA1_Update(&ctx, &hdr.second_size, sizeof(hdr.second_size));
+    SHA1_Final(sha, &ctx);
     memcpy(hdr.id, sha,
-           SHA_DIGEST_SIZE > sizeof(hdr.id) ? sizeof(hdr.id) : SHA_DIGEST_SIZE);
+           SHA_DIGEST_LENGTH > sizeof(hdr.id) ? sizeof(hdr.id) : SHA_DIGEST_LENGTH);
 
     fd = open(bootimg, O_CREAT | O_TRUNC | O_WRONLY, 0644);
     if(fd < 0) {
